@@ -52,14 +52,14 @@ function Login() {
       const { data } = await api.post("/auth/login", form, { headers: { "Content-Type": "application/x-www-form-urlencoded" } });
       localStorage.setItem("token", data.access_token);
       const me = await api.get("/me");
-      toast.success("Logged in");
+  toast.success("Login realizado");
       if (me.data.role === "nutritionist") nav("/n");
       else if (me.data.role === "patient" && me.data.patientId) nav(`/p/${me.data.patientId}`);
       else nav("/n");
     } catch (e) {
       console.error("Login error:", e);
-      const errorMessage = e.response?.data?.detail || e.response?.statusText || "Invalid credentials";
-      toast.error(errorMessage);
+  const errorMessage = e.response?.data?.detail || e.response?.statusText || "Credenciais inválidas";
+  toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -71,19 +71,19 @@ function Login() {
         <Card className="rounded-2xl shadow-lg border-0">
           <CardHeader>
             <CardTitle className="text-2xl text-slate-900">DiNutri</CardTitle>
-            <CardDescription>Secure login for nutritionists and patients</CardDescription>
+            <CardDescription>Login seguro para nutricionistas e pacientes</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={submit} className="space-y-4">
               <div>
-                <Label>Email</Label>
-                <Input aria-label="Email address" value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="you@dinutri.app" required />
+                <Label>E-mail</Label>
+                <Input aria-label="Endereço de e-mail" value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="seuemail@dinutri.app" required />
               </div>
               <div>
-                <Label>Password</Label>
-                <Input aria-label="Password" value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
+                <Label>Senha</Label>
+                <Input aria-label="Senha" value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
               </div>
-              <Button disabled={loading} className="w-full h-11 rounded-full bg-blue-600 hover:bg-blue-700 text-white">Sign in</Button>
+              <Button disabled={loading} className="w-full h-11 rounded-full bg-blue-600 hover:bg-blue-700 text-white">Entrar</Button>
             </form>
           </CardContent>
         </Card>
@@ -99,7 +99,7 @@ function Topbar({ onLogout }) {
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link to="/n" className="font-semibold text-slate-900">DiNutri</Link>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={onLogout}><LogOut className="mr-2" />Logout</Button>
+          <Button variant="ghost" onClick={onLogout}><LogOut className="mr-2" />Sair</Button>
         </div>
       </div>
     </div>
@@ -148,44 +148,44 @@ function InviteManager({ open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent aria-describedby="invite-desc">
         <DialogHeader>
-          <DialogTitle>Invites</DialogTitle>
-          <DialogDescription id="invite-desc">Create and manage patient self-registration invites.</DialogDescription>
+          <DialogTitle>Convites</DialogTitle>
+          <DialogDescription id="invite-desc">Crie e gerencie convites para auto cadastro de pacientes.</DialogDescription>
         </DialogHeader>
         <form onSubmit={createInvite} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div className="sm:col-span-2">
-            <Label>Email</Label>
-            <Input aria-label="Invite email" value={email} onChange={(e)=>setEmail(e.target.value)} type="email" required />
+            <Label>E-mail</Label>
+            <Input aria-label="E-mail do convite" value={email} onChange={(e)=>setEmail(e.target.value)} type="email" required />
           </div>
           <div>
-            <Label>Expiry</Label>
+            <Label>Expiração</Label>
             <Select value={preset} onValueChange={setPreset}>
-              <SelectTrigger className="w-full"><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="7d">7 days</SelectItem>
-                <SelectItem value="14d">14 days</SelectItem>
-                <SelectItem value="30d">30 days</SelectItem>
-                <SelectItem value="custom">Custom (hours)</SelectItem>
+                <SelectItem value="7d">7 dias</SelectItem>
+                <SelectItem value="14d">14 dias</SelectItem>
+                <SelectItem value="30d">30 dias</SelectItem>
+                <SelectItem value="custom">Personalizado (horas)</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label>Custom hours</Label>
-            <Input aria-label="Custom expiry in hours" value={customHours} onChange={(e)=>setCustomHours(e.target.value)} type="number" min="1" placeholder="e.g. 48" disabled={preset!=="custom"} />
+            <Label>Horas personalizadas</Label>
+            <Input aria-label="Expiração personalizada em horas" value={customHours} onChange={(e)=>setCustomHours(e.target.value)} type="number" min="1" placeholder="ex: 48" disabled={preset!=="custom"} />
           </div>
           <div className="sm:col-span-4">
-            <Button className="rounded-full bg-blue-600 hover:bg-blue-700 text-white">Create invite</Button>
+            <Button className="rounded-full bg-blue-600 hover:bg-blue-700 text-white">Criar convite</Button>
           </div>
         </form>
 
         <div className="mt-2">
-          <h4 className="text-sm font-medium mb-2">Existing Invites</h4>
+          <h4 className="text-sm font-medium mb-2">Convites existentes</h4>
           <div className="space-y-2 max-h-72 overflow-auto pr-1">
             {invites.map((inv)=> (
               <Card key={inv.id} className="rounded-xl">
                 <CardContent className="py-3 grid grid-cols-1 sm:grid-cols-5 gap-2 items-center">
                   <div className="truncate"><div className="text-slate-900 font-medium">{inv.email}</div>
-                    <div className="text-xs text-slate-500">Created by you • {fmt(inv.createdAt)}</div></div>
-                  <div className="text-xs text-slate-600">Expires: {fmt(inv.expiresAt)}</div>
+                    <div className="text-xs text-slate-500">Criado por você • {fmt(inv.createdAt)}</div></div>
+                  <div className="text-xs text-slate-600">Expira: {fmt(inv.expiresAt)}</div>
                   <div>
                     <Badge variant="secondary" className="capitalize">{inv.status}</Badge>
                   </div>
@@ -195,10 +195,10 @@ function InviteManager({ open, onOpenChange }) {
                         <TooltipTrigger asChild>
                           <Button size="sm" variant="outline" aria-label="Copy invite link" className="rounded-full" onClick={()=>copyLink(inv.token)}><Copy /></Button>
                         </TooltipTrigger>
-                        <TooltipContent>Copy link</TooltipContent>
+                        <TooltipContent>Copiar link</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    <Button size="sm" variant="outline" className="rounded-full" disabled={inv.status!=="active"} onClick={()=>revokeInvite(inv.id)}><Trash2 className="mr-1"/> Revoke</Button>
+                    <Button size="sm" variant="outline" className="rounded-full" disabled={inv.status!=="active"} onClick={()=>revokeInvite(inv.id)}><Trash2 className="mr-1"/> Revogar</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -248,57 +248,57 @@ function NutritionistDashboard() {
       <Topbar onLogout={logout} />
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2"><Users /> Patients</h2>
+          <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2"><Users /> Pacientes</h2>
           <div className="flex gap-2">
             <Dialog open={showCreate} onOpenChange={setShowCreate}>
               <DialogTrigger asChild>
-                <Button className="rounded-full bg-blue-600 hover:bg-blue-700 text-white"><Plus /> New Patient</Button>
+                <Button className="rounded-full bg-blue-600 hover:bg-blue-700 text-white"><Plus /> Novo paciente</Button>
               </DialogTrigger>
               <DialogContent aria-describedby="addpatient-desc" className="sm:max-w-lg">
                 <DialogHeader>
-                  <DialogTitle>Add Patient</DialogTitle>
-                  <DialogDescription id="addpatient-desc">Create a patient record linked to your account.</DialogDescription>
+                  <DialogTitle>Adicionar paciente</DialogTitle>
+                  <DialogDescription id="addpatient-desc">Crie um registro de paciente vinculado à sua conta.</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={createPatient} className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <Label>Name</Label>
+                    <Label>Nome</Label>
                     <Input name="name" required />
                   </div>
                   <div className="col-span-2">
-                    <Label>Email</Label>
+                    <Label>E-mail</Label>
                     <Input name="email" type="email" required />
                   </div>
                   <div>
-                    <Label>Birth date</Label>
-                    <Input name="birthDate" placeholder="YYYY-MM-DD" />
+                    <Label>Data de nascimento</Label>
+                    <Input name="birthDate" placeholder="AAAA-MM-DD" />
                   </div>
                   <div>
-                    <Label>Sex</Label>
+                    <Label>Sexo</Label>
                     <Input name="sex" placeholder="F/M" />
                   </div>
                   <div>
-                    <Label>Height (cm)</Label>
+                    <Label>Altura (cm)</Label>
                     <Input name="heightCm" type="number" step="0.1" />
                   </div>
                   <div>
-                    <Label>Weight (kg)</Label>
+                    <Label>Peso (kg)</Label>
                     <Input name="weightKg" type="number" step="0.1" />
                   </div>
                   <div className="col-span-2">
-                    <Label>Phone</Label>
+                    <Label>Telefone</Label>
                     <Input name="phone" />
                   </div>
                   <div className="col-span-2">
-                    <Label>Notes</Label>
+                    <Label>Observações</Label>
                     <Textarea name="notes" />
                   </div>
                   <div className="col-span-2 mt-2">
-                    <Button className="w-full rounded-full bg-blue-600 hover:bg-blue-700 text-white">Save</Button>
+                    <Button className="w-full rounded-full bg-blue-600 hover:bg-blue-700 text-white">Salvar</Button>
                   </div>
                 </form>
               </DialogContent>
             </Dialog>
-            <Button variant="outline" className="rounded-full" onClick={()=>setShowInvite(true)}>Invites</Button>
+            <Button variant="outline" className="rounded-full" onClick={()=>setShowInvite(true)}>Convites</Button>
           </div>
         </div>
 
@@ -310,9 +310,9 @@ function NutritionistDashboard() {
                 <CardDescription>{p.email}</CardDescription>
               </CardHeader>
               <CardContent className="flex gap-2 flex-wrap">
-                <Link to={`/n/prescribe/${p.id}`}><Button size="sm" variant="secondary" className="rounded-full"><FilePlus2 className="mr-1" /> New Prescription</Button></Link>
-                <Link to={`/p/${p.id}`}><Button size="sm" variant="outline" className="rounded-full"><Eye className="mr-1" /> Patient view</Button></Link>
-                <Button size="sm" variant="outline" className="rounded-full" onClick={()=> setVersionsFor(p)}>Versions</Button>
+                <Link to={`/n/prescribe/${p.id}`}><Button size="sm" variant="secondary" className="rounded-full"><FilePlus2 className="mr-1" /> Nova prescrição</Button></Link>
+                <Link to={`/p/${p.id}`}><Button size="sm" variant="outline" className="rounded-full"><Eye className="mr-1" /> Visualizar paciente</Button></Link>
+                <Button size="sm" variant="outline" className="rounded-full" onClick={()=> setVersionsFor(p)}>Versões</Button>
               </CardContent>
             </Card>
           ))}
@@ -349,7 +349,7 @@ function PatientView() {
     if (e.key === "ArrowLeft") { e.preventDefault(); setExpanded(undefined); }
   };
 
-  if (!presc) return <div className="min-h-screen flex items-center justify-center">No published plan yet.</div>;
+  if (!presc) return <div className="min-h-screen flex items-center justify-center">Nenhum plano publicado ainda.</div>;
 
   const pubDate = presc.publishedAt ? new Date(presc.publishedAt).toLocaleDateString() : new Date(presc.updatedAt || presc.createdAt).toLocaleDateString();
 
@@ -359,9 +359,9 @@ function PatientView() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-semibold text-slate-900">{presc.title}</h1>
-            <div className="text-sm text-slate-500">Published: {pubDate}</div>
+            <div className="text-sm text-slate-500">Publicado: {pubDate}</div>
           </div>
-          <Button onClick={()=>window.print()} variant="outline" className="rounded-full">Print / PDF</Button>
+          <Button onClick={()=>window.print()} variant="outline" className="rounded-full">Imprimir / PDF</Button>
         </div>
         <Accordion type="single" collapsible value={expanded} onValueChange={onAccChange} className="w-full">
           {presc.meals.map((m, idx) => (
@@ -372,7 +372,7 @@ function PatientView() {
                 className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-md">
                 <div className="flex items-center justify-between w-full">
                   <span className="font-medium">{m.name}</span>
-                  <span className="text-sm text-slate-500">{m.items.length} items</span>
+                  <span className="text-sm text-slate-500">{m.items.length} itens</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent>
@@ -393,13 +393,13 @@ function PatientView() {
                                     <Button size="sm" variant="ghost" aria-label="View substitutions" className="rounded-full"><Shuffle /></Button>
                                   </DialogTrigger>
                                 </TooltipTrigger>
-                                <TooltipContent>Substitutions</TooltipContent>
+                                <TooltipContent>Substituições</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                             <DialogContent aria-describedby={`subs-desc-${it.id}`}>
                               <DialogHeader>
-                                <DialogTitle>Substitutions</DialogTitle>
-                                <DialogDescription id={`subs-desc-${it.id}`}>List of diet items you can substitute for this food.</DialogDescription>
+                                <DialogTitle>Substituições</DialogTitle>
+                                <DialogDescription id={`subs-desc-${it.id}`}>Lista de itens da dieta que você pode substituir por este alimento.</DialogDescription>
                               </DialogHeader>
                               <ul className="list-disc pl-6 space-y-1">
                                 {it.substitutions.map((s, idx) => <li key={idx}>{s}</li>)}
@@ -418,7 +418,7 @@ function PatientView() {
         {presc.generalNotes && (
           <Card className="mt-6 meal-section">
             <CardHeader>
-              <CardTitle>General Notes</CardTitle>
+              <CardTitle>Observações gerais</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-slate-700 whitespace-pre-wrap">{presc.generalNotes}</p>
