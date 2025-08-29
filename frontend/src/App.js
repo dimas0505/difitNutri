@@ -116,12 +116,20 @@ function NutritionistDashboard() {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const payload = Object.fromEntries(form.entries());
+    // Sanitize: remove empty strings and cast numbers
+    for (const k of Object.keys(payload)) {
+      if (payload[k] === "") delete payload[k];
+    }
+    if (payload.heightCm !== undefined) payload.heightCm = Number(payload.heightCm);
+    if (payload.weightKg !== undefined) payload.weightKg = Number(payload.weightKg);
     try {
       const { data } = await api.post("/patients", payload);
       toast.success("Patient created");
       setPatients([data, ...patients]);
       setShowCreate(false);
-    } catch { toast.error("Failed to create"); }
+    } catch {
+      toast.error("Failed to create");
+    }
   };
 
   const sendInvite = async () => {
