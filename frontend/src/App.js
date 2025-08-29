@@ -57,7 +57,9 @@ function Login() {
       else if (me.data.role === "patient" && me.data.patientId) nav(`/p/${me.data.patientId}`);
       else nav("/n");
     } catch (e) {
-      toast.error("Invalid credentials");
+      console.error("Login error:", e);
+      const errorMessage = e.response?.data?.detail || e.response?.statusText || "Invalid credentials";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
