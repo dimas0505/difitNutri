@@ -172,7 +172,7 @@ class InviteOut(BaseModel):
     token: str
     email: EmailStr
     status: Literal['active','used','expired','revoked']
-    createdAt: str
+    createdAt: Optional[str] = None
     expiresAt: Optional[str] = None
 
 class InviteRevokeResponse(BaseModel):
