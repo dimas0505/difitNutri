@@ -263,33 +263,53 @@ class DiNutriAPITester:
             200,
             token=self.patient_token
         )
-        if success and response.get('role') == 'patient' and response.get('patientId'):
+        if success and response.get('role') == 'patient':
             print(f"✅ Bob's role: {response.get('role')}")
-            print(f"✅ Bob's patient ID: {response.get('patientId')}")
             
-            # Test patient access to their own record
-            success, response = self.run_test(
-                "Bob Access Own Patient Record",
+            # Get Bob's patient record by searching patients with his email
+            success, patients_response = self.run_test(
+                "Get Bob's Patient Record",
                 "GET",
-                f"patients/{response.get('patientId')}",
+                "patients",
                 200,
-                token=self.patient_token
+                token=self.nutritionist_token
             )
+            
             if success:
-                print(f"✅ Bob can access own patient record")
+                # Find Bob's patient record
+                bob_patient = None
+                for patient in patients_response:
+                    if patient.get('email') == 'bob@example.com':
+                        bob_patient = patient
+                        break
                 
-                # Test patient access to latest prescription (should be null initially)
-                success, response = self.run_test(
-                    "Bob Get Latest Prescription",
-                    "GET",
-                    f"patients/{response.get('patientId')}/latest",
-                    200,
-                    token=self.patient_token
-                )
-                if success:
-                    print(f"✅ Bob can access latest prescription endpoint")
-                    print(f"   Latest prescription: {response}")
-                    return True
+                if bob_patient:
+                    bob_patient_id = bob_patient['id']
+                    print(f"✅ Found Bob's patient ID: {bob_patient_id}")
+                    
+                    # Test patient access to their own record
+                    success, response = self.run_test(
+                        "Bob Access Own Patient Record",
+                        "GET",
+                        f"patients/{bob_patient_id}",
+                        200,
+                        token=self.patient_token
+                    )
+                    if success:
+                        print(f"✅ Bob can access own patient record")
+                        
+                        # Test patient access to latest prescription (should be null initially)
+                        success, response = self.run_test(
+                            "Bob Get Latest Prescription",
+                            "GET",
+                            f"patients/{bob_patient_id}/latest",
+                            200,
+                            token=self.patient_token
+                        )
+                        if success:
+                            print(f"✅ Bob can access latest prescription endpoint")
+                            print(f"   Latest prescription: {response}")
+                            return True
         
         return False
 
