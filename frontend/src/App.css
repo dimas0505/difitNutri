@@ -8,15 +8,30 @@ body { font-family: 'Figtree', ui-sans-serif, system-ui, -apple-system, Segoe UI
 .fade-in { opacity: 0; animation: fadeIn 600ms ease forwards; }
 @keyframes fadeIn { to { opacity: 1; } }
 
-/* Buttons and inputs have transitions on colors only to avoid layout jank */
+/* Buttons and inputs: transition colors only */
 button, input, textarea { transition-property: background-color, color, border-color; transition-duration: 200ms; }
 
-/* Reduce motion for accessibility */
+/* Reduce motion */
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
 
-/* Print optimizations */
+/* Print layout improvements */
 @media print {
   .no-print { display: none !important; }
+  .page-break { page-break-after: always; break-after: page; }
+  /* Expand accordion content for print if needed */
+  [data-state="closed"] { display: block !important; }
+  .print-compact h1, .print-compact h2 { margin: 0 0 8px 0; }
+}
+
+/* Watermark for print */
+@media print {
+  body::after {
+    content: "DiNutri";
+    position: fixed; top: 40%; left: 15%;
+    font-size: 72px; color: rgba(0,0,0,0.06);
+    transform: rotate(-20deg);
+    pointer-events: none; z-index: 0;
+  }
 }

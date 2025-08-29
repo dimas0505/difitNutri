@@ -343,6 +343,26 @@ async def publish_prescription(prescription_id: str, user=Depends(require_role('
     p2 = await db.prescriptions.find_one({"id": prescription_id})
     return PrescriptionOut(**to_doc_id(p2))
 
+@api.post("/prescriptions/{prescription_id}/duplicate", response_model=PrescriptionOut)
+async def duplicate_prescription(prescription_id: str, user=Depends(require_role('nutritionist'))):
+    p = await db.prescriptions.find_one({"id": prescription_id})
+    if not p:
+        raise HTTPException(404, "Not found")
+    # ACL
+    if p["nutritionistId"] != user["id"]:
+        raise HTTPException(403, "Forbidden")
+    now = now_iso()
+    new_doc = {
+        **{k: v for k, v in p.items() if k not in ("_id", "id", "status", "publishedAt", "createdAt", "updatedAt")},
+        "id": str(uuid.uuid4()),
+        "status": "draft",
+        "publishedAt": None,
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    await db.prescriptions.insert_one(new_doc)
+    return PrescriptionOut(**to_doc_id(new_doc))
+
 @api.get("/patients/{patient_id}/latest", response_model=Optional[PrescriptionOut])
 async def latest_published(patient_id: str, user=Depends(get_current_user)):
     pt = await db.patients.find_one({"id": patient_id})
@@ -390,7 +410,6 @@ async def list_invites(user=Depends(require_role('nutritionist'))):
             except Exception:
                 pass
         inv["status"] = status_val
-        # Backfill createdAt if missing (for older docs)
         if not inv.get("createdAt"):
             created_iso = now_iso()
             inv["createdAt"] = created_iso
@@ -417,7 +436,6 @@ async def revoke_invite(invite_id: str, user=Depends(require_role('nutritionist'
         raise HTTPException(403, "Forbidden")
     if inv.get("status") in ("used", "revoked"):
         return InviteRevokeResponse(id=inv["id"], status=inv.get("status"))
-    # mark revoked
     await db.invites.update_one({"id": invite_id}, {"$set": {"status": "revoked"}})
     return InviteRevokeResponse(id=invite_id, status="revoked")
 
