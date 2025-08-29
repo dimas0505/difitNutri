@@ -24,6 +24,9 @@ DB_NAME = os.environ.get('DB_NAME', 'dinutri_db')
 JWT_SECRET = os.environ.get('JWT_SECRET')  # May be None; we'll generate ephemeral
 JWT_ALGO = 'HS256'
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+# Use a single in-memory secret for the app lifetime if JWT_SECRET is not provided
+SECRET = os.environ.get('JWT_SECRET') or str(uuid.uuid4())
+
 
 if not MONGO_URL:
     raise RuntimeError("MONGO_URL must be set in backend/.env")
