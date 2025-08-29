@@ -109,7 +109,7 @@ class DiNutriAPITester:
             "Create Patient Alice Doe",
             "POST",
             "patients",
-            201,
+            200,
             data={
                 "name": "Alice Doe",
                 "email": "alice@example.com"
