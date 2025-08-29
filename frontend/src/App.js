@@ -104,9 +104,225 @@ function Topbar({ onLogout }) {
   );
 }
 
-function InviteManager({ open, onOpenChange }) { /* unchanged from previous C */ }
+function InviteManager({ open, onOpenChange }) {
+  const [email, setEmail] = useState("");
+  const [preset, setPreset] = useState("7d");
+  const [customHours, setCustomHours] = useState("");
+  const [invites, setInvites] = useState([]);
+
+  const loadInvites = async () => {
+    try { const { data } = await api.get("/invites"); setInvites(data); } catch {}
+  };
+  useEffect(() => { if (open) loadInvites(); }, [open]);
+
+  const hoursForPreset = (p) => {
+    if (p === "custom") return Number(customHours || 0);
+    if (p === "7d") return 7 * 24; if (p === "14d") return 14 * 24; if (p === "30d") return 30 * 24; return 72;
+  };
+
+  const createInvite = async (e) => {
+    e.preventDefault();
+    try {
+      const hrs = hoursForPreset(preset);
+      const { data } = await api.post("/invites", { email, expiresInHours: hrs });
+      toast.success("Invite created");
+      setEmail(""); setCustomHours(""); setPreset("7d");
+      setInvites([data, ...invites]);
+    } catch { toast.error("Failed"); }
+  };
+
+  const revokeInvite = async (id) => {
+    try { await api.post(`/invites/${id}/revoke`); toast.success("Revoked"); loadInvites(); } catch { toast.error("Failed"); }
+  };
+
+  const copyLink = async (token) => {
+    const link = `${window.location.origin}/invite/${token}`;
+    try { await navigator.clipboard.writeText(link); toast.success("Invite link copied"); } catch { toast.message("Link: " + link); }
+  };
+
+  const fmt = (s) => s ? new Date(s).toLocaleString() : "—";
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent aria-describedby="invite-desc">
+        <DialogHeader>
+          <DialogTitle>Invites</DialogTitle>
+          <DialogDescription id="invite-desc">Create and manage patient self-registration invites.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={createInvite} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div className="sm:col-span-2">
+            <Label>Email</Label>
+            <Input aria-label="Invite email" value={email} onChange={(e)=>setEmail(e.target.value)} type="email" required />
+          </div>
+          <div>
+            <Label>Expiry</Label>
+            <Select value={preset} onValueChange={setPreset}>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7d">7 days</SelectItem>
+                <SelectItem value="14d">14 days</SelectItem>
+                <SelectItem value="30d">30 days</SelectItem>
+                <SelectItem value="custom">Custom (hours)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Custom hours</Label>
+            <Input aria-label="Custom expiry in hours" value={customHours} onChange={(e)=>setCustomHours(e.target.value)} type="number" min="1" placeholder="e.g. 48" disabled={preset!=="custom"} />
+          </div>
+          <div className="sm:col-span-4">
+            <Button className="rounded-full bg-blue-600 hover:bg-blue-700 text-white">Create invite</Button>
+          </div>
+        </form>
+
+        <div className="mt-2">
+          <h4 className="text-sm font-medium mb-2">Existing Invites</h4>
+          <div className="space-y-2 max-h-72 overflow-auto pr-1">
+            {invites.map((inv)=> (
+              <Card key={inv.id} className="rounded-xl">
+                <CardContent className="py-3 grid grid-cols-1 sm:grid-cols-5 gap-2 items-center">
+                  <div className="truncate"><div className="text-slate-900 font-medium">{inv.email}</div>
+                    <div className="text-xs text-slate-500">Created by you • {fmt(inv.createdAt)}</div></div>
+                  <div className="text-xs text-slate-600">Expires: {fmt(inv.expiresAt)}</div>
+                  <div>
+                    <Badge variant="secondary" className="capitalize">{inv.status}</Badge>
+                  </div>
+                  <div className="flex gap-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button size="sm" variant="outline" aria-label="Copy invite link" className="rounded-full" onClick={()=>copyLink(inv.token)}><Copy /></Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Copy link</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <Button size="sm" variant="outline" className="rounded-full" disabled={inv.status!=="active"} onClick={()=>revokeInvite(inv.id)}><Trash2 className="mr-1"/> Revoke</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function VersionsDialog({ patient, open, onOpenChange }) { /* unchanged from A */ }
-function NutritionistDashboard() { /* unchanged from A */ }
+
+function NutritionistDashboard() {
+  const nav = useNavigate();
+  const { user } = useAuth();
+  const [patients, setPatients] = useState([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
+  const [versionsFor, setVersionsFor] = useState(null);
+
+  useEffect(() => {
+    api.get("/patients").then((r) => setPatients(r.data)).catch(() => {});
+  }, []);
+
+  const logout = () => { localStorage.removeItem("token"); nav("/login"); };
+
+  const createPatient = async (e) => {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const payload = Object.fromEntries(form.entries());
+    for (const k of Object.keys(payload)) { if (payload[k] === "") delete payload[k]; }
+    if (payload.heightCm !== undefined) payload.heightCm = Number(payload.heightCm);
+    if (payload.weightKg !== undefined) payload.weightKg = Number(payload.weightKg);
+    try {
+      const { data } = await api.post("/patients", payload);
+      toast.success("Patient created");
+      setPatients([data, ...patients]);
+      setShowCreate(false);
+    } catch { toast.error("Failed to create"); }
+  };
+
+  if (!user) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <Topbar onLogout={logout} />
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2"><Users /> Patients</h2>
+          <div className="flex gap-2">
+            <Dialog open={showCreate} onOpenChange={setShowCreate}>
+              <DialogTrigger asChild>
+                <Button className="rounded-full bg-blue-600 hover:bg-blue-700 text-white"><Plus /> New Patient</Button>
+              </DialogTrigger>
+              <DialogContent aria-describedby="addpatient-desc" className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Add Patient</DialogTitle>
+                  <DialogDescription id="addpatient-desc">Create a patient record linked to your account.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={createPatient} className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <Label>Name</Label>
+                    <Input name="name" required />
+                  </div>
+                  <div className="col-span-2">
+                    <Label>Email</Label>
+                    <Input name="email" type="email" required />
+                  </div>
+                  <div>
+                    <Label>Birth date</Label>
+                    <Input name="birthDate" placeholder="YYYY-MM-DD" />
+                  </div>
+                  <div>
+                    <Label>Sex</Label>
+                    <Input name="sex" placeholder="F/M" />
+                  </div>
+                  <div>
+                    <Label>Height (cm)</Label>
+                    <Input name="heightCm" type="number" step="0.1" />
+                  </div>
+                  <div>
+                    <Label>Weight (kg)</Label>
+                    <Input name="weightKg" type="number" step="0.1" />
+                  </div>
+                  <div className="col-span-2">
+                    <Label>Phone</Label>
+                    <Input name="phone" />
+                  </div>
+                  <div className="col-span-2">
+                    <Label>Notes</Label>
+                    <Textarea name="notes" />
+                  </div>
+                  <div className="col-span-2 mt-2">
+                    <Button className="w-full rounded-full bg-blue-600 hover:bg-blue-700 text-white">Save</Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+            <Button variant="outline" className="rounded-full" onClick={()=>setShowInvite(true)}>Invites</Button>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          {patients.map((p) => (
+            <Card key={p.id} className="rounded-2xl shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-slate-900">{p.name}</CardTitle>
+                <CardDescription>{p.email}</CardDescription>
+              </CardHeader>
+              <CardContent className="flex gap-2 flex-wrap">
+                <Link to={`/n/prescribe/${p.id}`}><Button size="sm" variant="secondary" className="rounded-full"><FilePlus2 className="mr-1" /> New Prescription</Button></Link>
+                <Link to={`/p/${p.id}`}><Button size="sm" variant="outline" className="rounded-full"><Eye className="mr-1" /> Patient view</Button></Link>
+                <Button size="sm" variant="outline" className="rounded-full" onClick={()=> setVersionsFor(p)}>Versions</Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+      <InviteManager open={showInvite} onOpenChange={setShowInvite} />
+      {versionsFor && <VersionsDialog open={!!versionsFor} onOpenChange={()=> setVersionsFor(null)} patient={versionsFor} />}
+      <Toaster />
+    </div>
+  );
+}
+
 function PrescriptionEditor() { /* unchanged from A */ }
 
 function PatientView() {
