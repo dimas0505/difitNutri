@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 
 class DiNutriAPITester:
-    def __init__(self, base_url="https://diet-connect-1.preview.emergentagent.com/api"):
+    def __init__(self, base_url="http://localhost:8000/api"):
         self.base_url = base_url
         self.nutritionist_token = None
         self.patient_token = None
