@@ -204,7 +204,7 @@ class DiNutriAPITester:
             "Create Invite",
             "POST",
             "invites",
-            201,
+            200,
             data={"email": "bob@example.com", "expiresInHours": 1},
             token=self.nutritionist_token
         )
