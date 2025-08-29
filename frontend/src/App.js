@@ -49,8 +49,11 @@ function Login() {
       form.append("password", password);
       const { data } = await api.post("/auth/login", form, { headers: { "Content-Type": "application/x-www-form-urlencoded" } });
       localStorage.setItem("token", data.access_token);
+      const me = await api.get("/me");
       toast.success("Logged in");
-      nav("/n");
+      if (me.data.role === "nutritionist") nav("/n");
+      else if (me.data.role === "patient" && me.data.patientId) nav(`/p/${me.data.patientId}`);
+      else nav("/n");
     } catch (e) {
       toast.error("Invalid credentials");
     } finally {
