@@ -74,10 +74,7 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
-    secret = JWT_SECRET or os.environ.get('JWT_SECRET')
-    if not secret:
-        # Ephemeral for dev container session
-        secret = str(uuid.uuid4())
+    secret = SECRET
     encoded_jwt = jwt.encode(to_encode, secret, algorithm=JWT_ALGO)
     return encoded_jwt
 
