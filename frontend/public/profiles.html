@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DiNutri - Escolher Perfil</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(to bottom, #f0f9ff, #ffffff);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 1rem;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 { 
+            color: #1e3a8a; 
+            margin-bottom: 0.5rem; 
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 2rem;
+        }
+        .profiles {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .profile-card {
+            padding: 1.5rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f8fafc;
+        }
+        .profile-card:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            transform: translateY(-2px);
+        }
+        .profile-card.selected {
+            border-color: #1e3a8a;
+            background: #dbeafe;
+        }
+        .profile-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        .profile-name {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.25rem;
+        }
+        .profile-role {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+        .profile-email {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+        .login-btn {
+            background: #1e3a8a;
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            font-size: 1rem;
+        }
+        .login-btn:hover:not(:disabled) {
+            background: #1e40af;
+        }
+        .login-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+        .loading {
+            display: none;
+            color: #64748b;
+            margin-top: 1rem;
+        }
+        .spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .note {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-top: 1rem;
+            text-align: left;
+            font-size: 0.875rem;
+            color: #92400e;
+        }
+        .note strong {
+            color: #78350f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>DiNutri</h1>
+        <p class="subtitle">Escolha o perfil para fazer login</p>
+        
+        <div class="profiles">
+            <div class="profile-card" data-profile="nutritionist">
+                <div class="profile-icon">👨‍⚕️</div>
+                <div class="profile-name">Dr. João Silva</div>
+                <div class="profile-role">Nutricionista</div>
+                <div class="profile-email">nutricionista@teste.com</div>
+            </div>
+            
+            <div class="profile-card" data-profile="patient">
+                <div class="profile-icon">🏥</div>
+                <div class="profile-name">Dimas Melo</div>
+                <div class="profile-role">Paciente</div>
+                <div class="profile-email">dimasfherreira@gmail.com</div>
+            </div>
+        </div>
+        
+        <button class="login-btn" id="loginBtn" disabled>
+            Selecione um perfil
+        </button>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            Fazendo login...
+        </div>
+        
+        <div class="note">
+            <strong>💡 Para testar:</strong><br>
+            • <strong>Nutricionista:</strong> Gerenciar pacientes, criar prescrições<br>
+            • <strong>Paciente:</strong> Visualizar suas prescrições e dados
+        </div>
+    </div>
+
+    <script>
+        const profiles = {
+            nutritionist: {
+                token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhOTliOWVjNy05YWIyLTQ1NWYtOGM1My0zYjY1MWNjMjk5MTMiLCJyb2xlIjoibnV0cml0aW9uaXN0IiwiZXhwIjoxNzU5MDU3MDE5fQ.o180iiH1MKOVzFBOph46_5EwGsDcvvyzE_cn_TVUJYg',
+                name: 'Dr. João Silva',
+                role: 'nutritionist'
+            },
+            patient: {
+                token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiZTY3ZWM1Ny02NWM4LTRhYzUtYmViNy1iODE1NWY1ODk0YjkiLCJyb2xlIjoicGF0aWVudCIsImV4cCI6MTc1OTA1NzAxOX0.CzmPtExf2lu_0UoLc7gpSHkYznAR9nrnFNGa3Eo_h8g',
+                name: 'Dimas Melo',
+                role: 'patient'
+            }
+        };
+
+        let selectedProfile = null;
+        
+        document.querySelectorAll('.profile-card').forEach(card => {
+            card.addEventListener('click', () => {
+                // Remove selection from all cards
+                document.querySelectorAll('.profile-card').forEach(c => c.classList.remove('selected'));
+                
+                // Add selection to clicked card
+                card.classList.add('selected');
+                
+                // Update selected profile
+                selectedProfile = card.dataset.profile;
+                
+                // Update button
+                const btn = document.getElementById('loginBtn');
+                btn.textContent = `Entrar como ${profiles[selectedProfile].name}`;
+                btn.disabled = false;
+            });
+        });
+        
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            if (!selectedProfile) return;
+            
+            const profile = profiles[selectedProfile];
+            
+            // Show loading
+            document.getElementById('loginBtn').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            
+            console.log(`🔐 Fazendo login como ${profile.name} (${profile.role})...`);
+            localStorage.setItem('token', profile.token);
+            
+            console.log('✅ Token definido! Redirecionando...');
+            
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1500);
+        });
+    </script>
+</body>
+</html>

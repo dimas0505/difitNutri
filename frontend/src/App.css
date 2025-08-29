@@ -40,13 +40,147 @@ button, input, textarea, select { transition-property: background-color, color, 
   .meal-section:not(:last-child) { page-break-after: always; break-after: page; }
 }
 
-/* Watermark for print */
+/* Printing styles for prescription */
 @media print {
+  /* General print optimizations */
+  .print-hidden { display: none !important; }
+  .print-visible { display: block !important; }
+  
+  /* Hide navigation and UI elements */
+  nav, .navbar, .sidebar, .no-print { display: none !important; }
+  
+  /* Page setup */
+  @page {
+    margin: 15mm 20mm;
+    size: A4;
+  }
+  
+  /* Typography for print */
+  .print-title { 
+    font-size: 18pt !important; 
+    font-weight: 700 !important; 
+    margin-bottom: 12pt !important;
+    color: #1e3a8a !important;
+  }
+  
+  .print-subtitle { 
+    font-size: 14pt !important; 
+    font-weight: 600 !important; 
+    margin: 8pt 0 6pt 0 !important;
+    color: #1e40af !important;
+  }
+  
+  .print-text { 
+    font-size: 11pt !important; 
+    line-height: 1.4 !important;
+    margin-bottom: 6pt !important;
+  }
+  
+  .print-small { 
+    font-size: 9pt !important; 
+    color: #6b7280 !important;
+  }
+  
+  /* Tables for print */
+  .print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 8pt 0 !important;
+  }
+  
+  .print-table th,
+  .print-table td {
+    border: 1px solid #d1d5db !important;
+    padding: 6pt 8pt !important;
+    text-align: left !important;
+    font-size: 10pt !important;
+  }
+  
+  .print-table th {
+    background-color: #f3f4f6 !important;
+    font-weight: 600 !important;
+  }
+  
+  /* Meal sections */
+  .meal-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 20pt !important;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 12pt !important;
+  }
+  
+  /* Food items */
+  .food-item {
+    margin-bottom: 8pt !important;
+    break-inside: avoid;
+  }
+  
+  .food-item-name {
+    font-weight: 600 !important;
+    font-size: 11pt !important;
+  }
+  
+  .food-item-details {
+    font-size: 10pt !important;
+    color: #4b5563 !important;
+  }
+  
+  /* Substitutions */
+  .substitutions {
+    margin-top: 6pt !important;
+    padding-left: 12pt !important;
+    border-left: 2px solid #e5e7eb !important;
+  }
+  
+  /* Notes and observations */
+  .prescription-notes {
+    margin-top: 16pt !important;
+    padding: 8pt !important;
+    background-color: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+  }
+  
+  /* Header with logo and nutritionist info */
+  .print-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 20pt !important;
+    padding-bottom: 12pt !important;
+    border-bottom: 2px solid #1e3a8a !important;
+  }
+  
+  .print-logo {
+    font-size: 24pt !important;
+    font-weight: 700 !important;
+    color: #1e3a8a !important;
+  }
+  
+  .print-nutritionist-info {
+    text-align: right !important;
+    font-size: 10pt !important;
+    color: #6b7280 !important;
+  }
+  
+  /* Patient info section */
+  .print-patient-info {
+    margin-bottom: 16pt !important;
+    padding: 8pt !important;
+    background-color: #f0f9ff !important;
+    border: 1px solid #bfdbfe !important;
+  }
+  
+  /* Watermark */
   body::after {
     content: "DiNutri";
-    position: fixed; top: 40%; left: 10%;
-    font-size: 72px; color: rgba(0,0,0,0.06);
+    position: fixed; 
+    top: 40%; 
+    left: 10%;
+    font-size: 72px; 
+    color: rgba(30, 58, 138, 0.05);
     transform: rotate(-22deg);
-    pointer-events: none; z-index: 0;
+    pointer-events: none; 
+    z-index: -1;
   }
 }
