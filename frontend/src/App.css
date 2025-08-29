@@ -9,7 +9,7 @@ body { font-family: 'Figtree', ui-sans-serif, system-ui, -apple-system, Segoe UI
 @keyframes fadeIn { to { opacity: 1; } }
 
 /* Buttons and inputs: transition colors only */
-button, input, textarea { transition-property: background-color, color, border-color; transition-duration: 200ms; }
+button, input, textarea, select { transition-property: background-color, color, border-color; transition-duration: 200ms; }
 
 /* Reduce motion */
 @media (prefers-reduced-motion: reduce) {
@@ -18,20 +18,35 @@ button, input, textarea { transition-property: background-color, color, border-c
 
 /* Print layout improvements */
 @media print {
-  .no-print { display: none !important; }
-  .page-break { page-break-after: always; break-after: page; }
-  /* Expand accordion content for print if needed */
+  /* Hide interactive chrome */
+  button, [role="button"], input, textarea, select, .no-print { display: none !important; }
+
+  /* Typography */
+  html, body { background: #fff !important; }
+  body { font-size: 12pt; line-height: 1.45; color: #0a0a0a; }
+  h1, h2, h3 { color: #0a0a0a; }
+  .print-compact h1, .print-compact h2 { margin: 0 0 8px 0; line-height: 1.2; }
+  .print-muted { color: #6b7280 !important; }
+
+  /* Cards & borders */
+  .border, .card, .shadow, .shadow-sm, .shadow-lg { box-shadow: none !important; }
+  .border, .card, .rounded-xl, .rounded-2xl { border: 0 !important; background: #fff !important; }
+
+  /* Accordion: ensure content is visible */
   [data-state="closed"] { display: block !important; }
-  .print-compact h1, .print-compact h2 { margin: 0 0 8px 0; }
+
+  /* Page breaks per meal section */
+  .meal-section { break-inside: avoid; page-break-inside: avoid; }
+  .meal-section:not(:last-child) { page-break-after: always; break-after: page; }
 }
 
 /* Watermark for print */
 @media print {
   body::after {
     content: "DiNutri";
-    position: fixed; top: 40%; left: 15%;
+    position: fixed; top: 40%; left: 10%;
     font-size: 72px; color: rgba(0,0,0,0.06);
-    transform: rotate(-20deg);
+    transform: rotate(-22deg);
     pointer-events: none; z-index: 0;
   }
 }
