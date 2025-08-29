@@ -21,18 +21,17 @@ load_dotenv(ROOT_DIR / '.env')
 
 MONGO_URL = os.environ.get('MONGO_URL')
 DB_NAME = os.environ.get('DB_NAME', 'dinutri_db')
-JWT_SECRET = os.environ.get('JWT_SECRET')  # May be None; we'll generate ephemeral
 JWT_ALGO = 'HS256'
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
-# Use a single in-memory secret for the app lifetime if JWT_SECRET is not provided
-SECRET = os.environ.get('JWT_SECRET') or str(uuid.uuid4())
-
 
 if not MONGO_URL:
     raise RuntimeError("MONGO_URL must be set in backend/.env")
 
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
+
+# Use a single in-memory secret for the app lifetime if JWT_SECRET is not provided
+SECRET = os.environ.get('JWT_SECRET') or str(uuid.uuid4())
 
 # ----------------------------------------------------------------------------
 # App and Router
@@ -74,15 +73,13 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
-    secret = SECRET
-    encoded_jwt = jwt.encode(to_encode, secret, algorithm=JWT_ALGO)
+    encoded_jwt = jwt.encode(to_encode, SECRET, algorithm=JWT_ALGO)
     return encoded_jwt
 
 
 async def decode_token(token: str) -> Dict[str, Any]:
-    secret = SECRET
     try:
-        payload = jwt.decode(token, secret, algorithms=[JWT_ALGO])
+        payload = jwt.decode(token, SECRET, algorithms=[JWT_ALGO])
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
@@ -109,15 +106,11 @@ def require_role(*roles: str):
     return _role_dep
 
 # ----------------------------------------------------------------------------
-# Models (Pydantic) - use UUID string IDs; dates as ISO strings
+# Models (Pydantic)
 # ----------------------------------------------------------------------------
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-
-class AuthLoginRequest(BaseModel):
-    email: EmailStr
-    password: str
 
 class UserOut(BaseModel):
     id: str
@@ -178,25 +171,19 @@ class InviteOut(BaseModel):
     nutritionistId: str
     token: str
     email: EmailStr
-    status: Literal['active','used','expired']
+    status: Literal['active','used','expired','revoked']
+    createdAt: str
     expiresAt: Optional[str] = None
 
-class InviteAcceptRequest(BaseModel):
-    name: str
-    password: str
-    birthDate: Optional[str] = None
-    sex: Optional[str] = None
-    heightCm: Optional[float] = None
-    weightKg: Optional[float] = None
-    phone: Optional[str] = None
-    notes: Optional[str] = None
+class InviteRevokeResponse(BaseModel):
+    id: str
+    status: Literal['revoked','used','expired','active']
 
 # ----------------------------------------------------------------------------
 # Utilities
 # ----------------------------------------------------------------------------
 
 def to_doc_id(doc: Dict[str, Any]) -> Dict[str, Any]:
-    # Convert Mongo _id to id and drop _id
     if doc is None:
         return doc
     d = dict(doc)
@@ -224,7 +211,6 @@ async def seed_default_nutritionist():
 @api.get("/")
 async def root():
     return {"message": "DiNutri API running"}
-
 
 # Auth
 @api.post("/auth/login", response_model=TokenResponse)
@@ -265,7 +251,6 @@ async def get_patient(patient_id: str, user=Depends(get_current_user)):
     pt = await db.patients.find_one({"id": patient_id})
     if not pt:
         raise HTTPException(404, "Patient not found")
-    # Access control: nutritionist owner or the patient themself
     if user["role"] == "nutritionist" and pt["ownerId"] != user["id"]:
         raise HTTPException(403, "Forbidden")
     if user["role"] == "patient" and user.get("patientId") != patient_id:
@@ -288,7 +273,6 @@ async def update_patient(patient_id: str, payload: PatientCreate, user=Depends(r
 # Prescriptions
 @api.post("/prescriptions", response_model=PrescriptionOut)
 async def create_prescription(payload: PrescriptionCreate, user=Depends(require_role('nutritionist'))):
-    # Ensure the patient belongs to this nutritionist
     pt = await db.patients.find_one({"id": payload.patientId})
     if not pt or pt["ownerId"] != user["id"]:
         raise HTTPException(403, "Forbidden")
@@ -313,7 +297,6 @@ async def list_prescriptions(patient_id: str, user=Depends(get_current_user)):
     pt = await db.patients.find_one({"id": patient_id})
     if not pt:
         raise HTTPException(404, "Patient not found")
-    # ACL
     if user["role"] == "nutritionist" and pt["ownerId"] != user["id"]:
         raise HTTPException(403, "Forbidden")
     if user["role"] == "patient" and user.get("patientId") != patient_id:
@@ -326,7 +309,6 @@ async def get_prescription(prescription_id: str, user=Depends(get_current_user))
     p = await db.prescriptions.find_one({"id": prescription_id})
     if not p:
         raise HTTPException(404, "Not found")
-    # ACL: must be owner nutritionist or patient linked
     pt = await db.patients.find_one({"id": p["patientId"]})
     if user["role"] == "nutritionist" and pt["ownerId"] != user["id"]:
         raise HTTPException(403, "Forbidden")
@@ -361,7 +343,6 @@ async def publish_prescription(prescription_id: str, user=Depends(require_role('
     p2 = await db.prescriptions.find_one({"id": prescription_id})
     return PrescriptionOut(**to_doc_id(p2))
 
-# Latest published for a patient (patient view shortcut)
 @api.get("/patients/{patient_id}/latest", response_model=Optional[PrescriptionOut])
 async def latest_published(patient_id: str, user=Depends(get_current_user)):
     pt = await db.patients.find_one({"id": patient_id})
@@ -381,30 +362,63 @@ async def create_invite(payload: InviteCreate, user=Depends(require_role('nutrit
     expires_at = None
     if payload.expiresInHours and payload.expiresInHours > 0:
         expires_at = (datetime.now(timezone.utc) + timedelta(hours=payload.expiresInHours)).isoformat()
+    now = now_iso()
     doc = {
         "id": str(uuid.uuid4()),
         "nutritionistId": user["id"],
         "token": token,
         "email": payload.email.lower(),
         "status": "active",
+        "createdAt": now,
         "expiresAt": expires_at,
     }
     await db.invites.insert_one(doc)
     return InviteOut(**doc)
+
+@api.get("/invites", response_model=List[InviteOut])
+async def list_invites(user=Depends(require_role('nutritionist'))):
+    rows = await db.invites.find({"nutritionistId": user["id"]}).sort("createdAt", -1).to_list(length=None)
+    now = datetime.now(timezone.utc)
+    out: List[InviteOut] = []
+    for inv in rows:
+        status_val = inv.get("status", "active")
+        if status_val == "active" and inv.get("expiresAt"):
+            try:
+                if datetime.fromisoformat(inv["expiresAt"]) < now:
+                    status_val = "expired"
+                    # persist expiry status
+                    await db.invites.update_one({"id": inv["id"]}, {"$set": {"status": "expired"}})
+            except Exception:
+                pass
+        inv["status"] = status_val
+        out.append(InviteOut(**to_doc_id(inv)))
+    return out
 
 @api.get("/invites/{token}", response_model=InviteOut)
 async def get_invite(token: str):
     inv = await db.invites.find_one({"token": token})
     if not inv:
         raise HTTPException(404, "Invite not found")
-    # Check expiry
-    if inv.get("expiresAt"):
+    if inv.get("status") == "active" and inv.get("expiresAt"):
         if datetime.fromisoformat(inv["expiresAt"]) < datetime.now(timezone.utc):
             inv["status"] = "expired"
     return InviteOut(**to_doc_id(inv))
 
+@api.post("/invites/{invite_id}/revoke", response_model=InviteRevokeResponse)
+async def revoke_invite(invite_id: str, user=Depends(require_role('nutritionist'))):
+    inv = await db.invites.find_one({"id": invite_id})
+    if not inv:
+        raise HTTPException(404, "Invite not found")
+    if inv["nutritionistId"] != user["id"]:
+        raise HTTPException(403, "Forbidden")
+    if inv.get("status") in ("used", "revoked"):
+        return InviteRevokeResponse(id=inv["id"], status=inv.get("status"))
+    # mark revoked
+    await db.invites.update_one({"id": invite_id}, {"$set": {"status": "revoked"}})
+    return InviteRevokeResponse(id=invite_id, status="revoked")
+
 @api.post("/invites/{token}/accept", response_model=UserOut)
-async def accept_invite(token: str, payload: InviteAcceptRequest):
+async def accept_invite(token: str, payload: Dict[str, Any]):
     inv = await db.invites.find_one({"token": token})
     if not inv:
         raise HTTPException(404, "Invite not found")
@@ -414,30 +428,28 @@ async def accept_invite(token: str, payload: InviteAcceptRequest):
         await db.invites.update_one({"id": inv["id"]}, {"$set": {"status": "expired"}})
         raise HTTPException(400, "Invite expired")
 
-    # Create patient user and patient record, link them
     now = now_iso()
     patient_user = {
         "id": str(uuid.uuid4()),
         "role": "patient",
-        "name": payload.name,
+        "name": payload.get("name"),
         "email": inv["email"],
-        "passwordHash": get_password_hash(payload.password),
+        "passwordHash": get_password_hash(payload.get("password")),
         "createdAt": now,
         "updatedAt": now,
-        # link to patientId after creation
     }
 
     patient_doc = {
         "id": str(uuid.uuid4()),
         "ownerId": inv["nutritionistId"],
-        "name": payload.name,
+        "name": payload.get("name"),
         "email": inv["email"],
-        "birthDate": payload.birthDate,
-        "sex": payload.sex,
-        "heightCm": payload.heightCm,
-        "weightKg": payload.weightKg,
-        "phone": payload.phone,
-        "notes": payload.notes,
+        "birthDate": payload.get("birthDate"),
+        "sex": payload.get("sex"),
+        "heightCm": payload.get("heightCm"),
+        "weightKg": payload.get("weightKg"),
+        "phone": payload.get("phone"),
+        "notes": payload.get("notes"),
         "createdAt": now,
         "updatedAt": now,
     }
