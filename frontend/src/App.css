@@ -1,34 +1,17 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
-}
+/* Global styles for DiNutri - professional blue theme */
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap');
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
-}
+html, body, #root { height: 100%; }
+body { font-family: 'Figtree', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji'; }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
-}
+/***** Animations *****/
+.fade-in { opacity: 0; animation: fadeIn 600ms ease forwards; }
+@keyframes fadeIn { to { opacity: 1; } }
 
-.App-link {
-    color: #61dafb;
-}
+/* Buttons and inputs have transitions on colors only to avoid layout jank */
+button, input, textarea { transition-property: background-color, color, border-color; transition-duration: 200ms; }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+/* Print optimizations */
+@media print {
+  .no-print { display: none !important; }
 }
