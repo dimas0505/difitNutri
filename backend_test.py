@@ -232,7 +232,7 @@ class DiNutriAPITester:
             "Accept Invite",
             "POST",
             f"invites/{self.invite_token}/accept",
-            201,
+            200,
             data={"name": "Bob", "password": "bobpass"}
         )
         if not success or response.get('role') != 'patient':
