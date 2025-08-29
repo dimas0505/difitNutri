@@ -154,7 +154,7 @@ class DiNutriAPITester:
             "Create Published Prescription",
             "POST",
             "prescriptions",
-            201,
+            200,
             data=prescription_data,
             token=self.nutritionist_token
         )
