@@ -80,9 +80,7 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
 
 
 async def decode_token(token: str) -> Dict[str, Any]:
-    secret = JWT_SECRET or os.environ.get('JWT_SECRET')
-    if not secret:
-        secret = str(uuid.uuid4())  # This will fail to decode previously-issued tokens, ok for dev
+    secret = SECRET
     try:
         payload = jwt.decode(token, secret, algorithms=[JWT_ALGO])
         return payload
