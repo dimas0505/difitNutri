@@ -386,11 +386,15 @@ async def list_invites(user=Depends(require_role('nutritionist'))):
             try:
                 if datetime.fromisoformat(inv["expiresAt"]) < now:
                     status_val = "expired"
-                    # persist expiry status
                     await db.invites.update_one({"id": inv["id"]}, {"$set": {"status": "expired"}})
             except Exception:
                 pass
         inv["status"] = status_val
+        # Backfill createdAt if missing (for older docs)
+        if not inv.get("createdAt"):
+            created_iso = now_iso()
+            inv["createdAt"] = created_iso
+            await db.invites.update_one({"id": inv["id"]}, {"$set": {"createdAt": created_iso}})
         out.append(InviteOut(**to_doc_id(inv)))
     return out
 
