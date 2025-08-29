@@ -17,7 +17,14 @@ router.post('/', authenticateToken, requireRole('nutritionist'), async (req, res
     }
 
     // Verify patient exists and belongs to nutritionist
-    const patient = await Patient.findOne({ id: patientId, ownerId: req.user.id });
+    let patient;
+    if (global.isMemoryMode) {
+      const patients = await global.db.findPatients({ id: patientId, ownerId: req.user.id });
+      patient = patients[0] || null;
+    } else {
+      patient = await Patient.findOne({ id: patientId, ownerId: req.user.id });
+    }
+
     if (!patient) {
       return res.status(404).json({ detail: 'Patient not found' });
     }
@@ -36,8 +43,13 @@ router.post('/', authenticateToken, requireRole('nutritionist'), async (req, res
       updatedAt: now
     };
 
-    const prescription = new Prescription(prescriptionData);
-    await prescription.save();
+    // Handle both MongoDB and memory store
+    if (global.isMemoryMode) {
+      await global.db.createPrescription(prescriptionData);
+    } else {
+      const prescription = new Prescription(prescriptionData);
+      await prescription.save();
+    }
 
     res.json(prescriptionData);
   } catch (error) {

@@ -15,7 +15,14 @@ router.post('/login', async (req, res) => {
     }
 
     const email = username.toLowerCase();
-    const user = await User.findOne({ email });
+    let user;
+
+    // Handle both MongoDB and memory store
+    if (global.isMemoryMode) {
+      user = await global.db.findUser({ email });
+    } else {
+      user = await User.findOne({ email });
+    }
     
     if (!user) {
       return res.status(400).json({ detail: 'Invalid credentials' });

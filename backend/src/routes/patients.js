@@ -26,8 +26,13 @@ router.post('/', authenticateToken, requireRole('nutritionist'), async (req, res
       updatedAt: now
     };
 
-    const patient = new Patient(patientData);
-    await patient.save();
+    // Handle both MongoDB and memory store
+    if (global.isMemoryMode) {
+      await global.db.createPatient(patientData);
+    } else {
+      const patient = new Patient(patientData);
+      await patient.save();
+    }
 
     res.json(patientData);
   } catch (error) {
@@ -39,7 +44,15 @@ router.post('/', authenticateToken, requireRole('nutritionist'), async (req, res
 // List patients (nutritionist only)
 router.get('/', authenticateToken, requireRole('nutritionist'), async (req, res) => {
   try {
-    const patients = await Patient.find({ ownerId: req.user.id }).select('-_id -__v');
+    let patients;
+    
+    // Handle both MongoDB and memory store
+    if (global.isMemoryMode) {
+      patients = await global.db.findPatients({ ownerId: req.user.id });
+    } else {
+      patients = await Patient.find({ ownerId: req.user.id }).select('-_id -__v');
+    }
+    
     res.json(patients);
   } catch (error) {
     console.error('List patients error:', error);
@@ -51,7 +64,14 @@ router.get('/', authenticateToken, requireRole('nutritionist'), async (req, res)
 router.get('/:patientId', authenticateToken, async (req, res) => {
   try {
     const { patientId } = req.params;
-    const patient = await Patient.findOne({ id: patientId }).select('-_id -__v');
+    let patient;
+
+    // Handle both MongoDB and memory store
+    if (global.isMemoryMode) {
+      patient = await global.db.findPatient({ id: patientId });
+    } else {
+      patient = await Patient.findOne({ id: patientId }).select('-_id -__v');
+    }
     
     if (!patient) {
       return res.status(404).json({ detail: 'Patient not found' });
@@ -110,7 +130,13 @@ router.get('/:patientId/latest', authenticateToken, async (req, res) => {
     const { patientId } = req.params;
     
     // Verify patient exists and user has access
-    const patient = await Patient.findOne({ id: patientId });
+    let patient;
+    if (global.isMemoryMode) {
+      patient = await global.db.findPatient({ id: patientId });
+    } else {
+      patient = await Patient.findOne({ id: patientId });
+    }
+
     if (!patient) {
       return res.status(404).json({ detail: 'Patient not found' });
     }
@@ -123,12 +149,17 @@ router.get('/:patientId/latest', authenticateToken, async (req, res) => {
     }
 
     // Find latest published prescription
-    const prescription = await Prescription.findOne({ 
-      patientId, 
-      status: 'published' 
-    })
-    .sort({ publishedAt: -1 })
-    .select('-_id -__v');
+    let prescription;
+    if (global.isMemoryMode) {
+      prescription = await global.db.findLatestPrescription(patientId, 'published');
+    } else {
+      prescription = await Prescription.findOne({ 
+        patientId, 
+        status: 'published' 
+      })
+      .sort({ publishedAt: -1 })
+      .select('-_id -__v');
+    }
 
     res.json(prescription);
   } catch (error) {

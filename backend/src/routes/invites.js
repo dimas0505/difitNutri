@@ -18,7 +18,13 @@ router.post('/', authenticateToken, requireRole('nutritionist'), async (req, res
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    let existingUser;
+    if (global.isMemoryMode) {
+      existingUser = await global.db.findUser({ email: email.toLowerCase() });
+    } else {
+      existingUser = await User.findOne({ email: email.toLowerCase() });
+    }
+
     if (existingUser) {
       return res.status(400).json({ detail: 'User with this email already exists' });
     }
@@ -37,8 +43,13 @@ router.post('/', authenticateToken, requireRole('nutritionist'), async (req, res
       updatedAt: now
     };
 
-    const invite = new Invite(inviteData);
-    await invite.save();
+    // Handle both MongoDB and memory store
+    if (global.isMemoryMode) {
+      await global.db.createInvite(inviteData);
+    } else {
+      const invite = new Invite(inviteData);
+      await invite.save();
+    }
 
     res.json(inviteData);
   } catch (error) {
@@ -62,7 +73,14 @@ router.get('/', authenticateToken, requireRole('nutritionist'), async (req, res)
 router.get('/:token', async (req, res) => {
   try {
     const { token } = req.params;
-    const invite = await Invite.findOne({ token }).select('-_id -__v');
+    let invite;
+
+    // Handle both MongoDB and memory store
+    if (global.isMemoryMode) {
+      invite = await global.db.findInvite({ token });
+    } else {
+      invite = await Invite.findOne({ token }).select('-_id -__v');
+    }
     
     if (!invite) {
       return res.status(404).json({ detail: 'Invite not found' });
@@ -90,7 +108,12 @@ router.post('/:token/accept', async (req, res) => {
       return res.status(400).json({ detail: 'Name and password are required' });
     }
 
-    const invite = await Invite.findOne({ token });
+    let invite;
+    if (global.isMemoryMode) {
+      invite = await global.db.findInvite({ token });
+    } else {
+      invite = await Invite.findOne({ token });
+    }
     
     if (!invite) {
       return res.status(404).json({ detail: 'Invite not found' });
@@ -106,7 +129,13 @@ router.post('/:token/accept', async (req, res) => {
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email: invite.email });
+    let existingUser;
+    if (global.isMemoryMode) {
+      existingUser = await global.db.findUser({ email: invite.email });
+    } else {
+      existingUser = await User.findOne({ email: invite.email });
+    }
+
     if (existingUser) {
       return res.status(400).json({ detail: 'User with this email already exists' });
     }
@@ -124,9 +153,6 @@ router.post('/:token/accept', async (req, res) => {
       updatedAt: now
     };
 
-    const patient = new Patient(patientData);
-    await patient.save();
-
     // Create user account
     const userData = {
       id: uuidv4(),
@@ -139,11 +165,20 @@ router.post('/:token/accept', async (req, res) => {
       updatedAt: now
     };
 
-    const user = new User(userData);
-    await user.save();
+    // Handle both MongoDB and memory store
+    if (global.isMemoryMode) {
+      await global.db.createPatient(patientData);
+      await global.db.createUser(userData);
+      await global.db.updateInvite(invite.id, { status: 'used', updatedAt: now });
+    } else {
+      const patient = new Patient(patientData);
+      await patient.save();
 
-    // Mark invite as used
-    await Invite.updateOne({ token }, { status: 'used', updatedAt: now });
+      const user = new User(userData);
+      await user.save();
+
+      await Invite.updateOne({ token }, { status: 'used', updatedAt: now });
+    }
 
     res.json({
       id: userData.id,

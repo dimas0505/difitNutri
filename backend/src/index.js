@@ -5,6 +5,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/database');
+const MemoryStore = require('./config/memoryStore');
 const { hashPassword, nowISO } = require('./utils/auth');
 const User = require('./models/User');
 const { v4: uuidv4 } = require('uuid');
@@ -18,6 +19,10 @@ const inviteRoutes = require('./routes/invites');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
+
+// Global storage - will be either MongoDB or MemoryStore
+global.db = null;
+global.isMemoryMode = false;
 
 // Security middleware
 app.use(helmet({
@@ -76,7 +81,8 @@ app.get('/api/health', (req, res) => {
     status: 'healthy', 
     timestamp: new Date().toISOString(),
     service: 'DiNutri API',
-    version: '1.0.0'
+    version: '1.0.0',
+    database: global.isMemoryMode ? 'memory' : 'mongodb'
   });
 });
 
@@ -103,7 +109,7 @@ app.use('*', (req, res) => {
   res.status(404).json({ detail: 'Endpoint not found' });
 });
 
-// Seed default nutritionist user
+// Seed default nutritionist user (MongoDB version)
 const seedDefaultUser = async () => {
   try {
     const existingUser = await User.findOne({ email: 'pro@dinutri.app' });
@@ -148,13 +154,24 @@ const startServer = async () => {
       }
     });
 
-    // Connect to database in background
+    // Try to connect to MongoDB first
     try {
-      await connectDB();
+      const connectPromise = connectDB();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout')), 5000)
+      );
+      
+      await Promise.race([connectPromise, timeoutPromise]);
       await seedDefaultUser();
-      console.log('✅ Database connected and seeded');
+      console.log('✅ MongoDB connected and seeded');
     } catch (dbError) {
-      console.error('⚠️ Database connection failed, running without persistence:', dbError.message);
+      console.error('⚠️ MongoDB connection failed, switching to memory mode:', dbError.message);
+      
+      // Fallback to memory store
+      global.isMemoryMode = true;
+      global.db = new MemoryStore();
+      await global.db.connect();
+      console.log('✅ Memory store initialized');
     }
   } catch (error) {
     console.error('❌ Failed to start server:', error);

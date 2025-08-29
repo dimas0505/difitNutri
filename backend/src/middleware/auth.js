@@ -11,7 +11,14 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findOne({ id: decoded.sub });
+    let user;
+
+    // Handle both MongoDB and memory store
+    if (global.isMemoryMode) {
+      user = await global.db.findUser({ id: decoded.sub });
+    } else {
+      user = await User.findOne({ id: decoded.sub });
+    }
     
     if (!user) {
       return res.status(401).json({ detail: 'Invalid token' });
